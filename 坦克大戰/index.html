@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <meta charset="utf-8">
+    <style type="text/css">
+        body {
+            font: 14px "sans-serif"
+        }
+
+        #Map {
+            background-color: #000000;
+        }
+
+        .show {
+            float: left
+        }
+
+        #guide {
+            float: left;
+            width: 200px;
+            height: 390px;
+            margin-left: 5px;
+            background: #CCCCCC;
+            padding: 5px;
+        }
+    </style>
+    <script type="text/javascript" src="Tank.js"></script>
+    <script type="text/javascript" src="Bullet.js"></script>
+    <script type="text/javascript" src="Bomb.js"></script>
+    <script type="text/javascript" src="Draw.js"></script>
+
+    <script type="text/javascript">
+        window.onload = function () {
+            //畫布資訊
+            width = document.getElementById('Map').width;
+            height = document.getElementById('Map').height;
+            ctx = document.getElementById('Map').getContext('2d');
+            //初始頁面
+            var starImg = new Image();
+            starImg.src = "start.jpg";
+            starImg.onload = function () {
+                ctx.drawImage(starImg, 0, 0, width, height);
+            }
+
+            //鍵盤監聽 回車開始遊戲
+            document.body.onkeydown = function () {
+                var keycode = event.keyCode;
+                switch (keycode) {
+                    case 13:
+                        //初始化引數
+                        init()
+                        //重新整理頁面
+                        setInterval(draw, 30);
+                        document.body.onkeydown = gameControl;
+                        break;
+                }
+            }
+        }
+
+        function init() {
+            //玩家和電腦
+            hero = new Hero(100, 300, 0);
+            enemys = [];
+            for (var i = 0; i < 10; i++) {
+                enemys.push(new Enemy(100 + i * 50, 0, 2));
+            }
+            //合併陣列
+            allTank = enemys.concat(hero);
+
+            //炸彈
+            Bombs = [];
+            im = new Image();
+            im2 = new Image();
+            im3 = new Image();
+            im.src = "1.jpg";
+            im2.src = "2.jpg";
+            im3.src = "3.jpg";
+        }
+
+        function gameControl() {
+            var keycode = event.keyCode;
+            switch (keycode) {
+                case 65:
+                    hero.moveLeft();
+                    break;//左
+                case 83:
+                    hero.moveDown();
+                    break;//下
+                case 87:
+                    hero.moveUp();
+                    break;//上
+                case 68:
+                    hero.moveRight();
+                    break;//右
+                case 74:
+                    hero.shot();
+                    break;
+                case 49:
+                    hero.addLife()
+                    break;
+            }
+        }
+
+        //擴充套件 刪除指定元素
+        Array.prototype.deleteElement = function (obj) {
+            if (obj) {
+                for (var i = 0; i < this.length; i++) {
+                    if (this[i] === obj) {
+                        this.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+    <div class="show">
+        <canvas id="Map" width="500px" height="400px">
+        </canvas>
+        <audio id="music" autoplay="autoplay">
+            <source src="music/111.wav">
+        </audio>
+    </div>
+    <div id="guide">
+
+        按下回車鍵開始遊戲
+
+        按下1鍵增加生命,預設是1
+
+        剩餘生命數 :<label id="life">1</label>
+
+        <div id="data">
+
+        </div>
+    </div>
+</body>
+
+</html>
