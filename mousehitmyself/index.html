@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Title</title>    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> 
+    <link rel="stylesheet" href="./style.css">    
+</head>
+<body>
+    <audio id="audio" class="displaynone" autoplay="autoplay" controls="controls" loop="loop">
+        <source src="audio/game_music.ogg" type="audio/ogg" />
+        
+    </audio>
+    <div id="playMusic">按我播放音樂</div>
+    <div id="gameStopBtn">按我遊戲暫停</div>
+    <div class="game">        
+        <div class="ground" id="_ground">
+            <div class="score">
+                
+                <span></span>                
+            </div>          
+        </div>        
+    </div>
+    <div id="gameStartBtn">按我新遊戲</div>
+    <div id="gameRules">遊戲說明</div>
+    <div id="gameExit">退出</div>
+    <div id="gameStopAlert"></div>
+    <div id="returnMenuBtn">返回主菜單</div>
+    <div id="keepGame">繼續遊戲</div>           
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    
+    
+    <script>       
+       
+       
+        let playMusic=document.querySelector("#playMusic")//撥放音樂按鈕
+        let audio=document.getElementById("audio");//AUDIO      
+        let gameStartBtn=document.querySelector("#gameStartBtn")//遊戲開始按鈕
+        let gameStopBtn=document.querySelector("#gameStopBtn")//遊戲暫停按鈕
+        let _ground = document.getElementById("_ground");
+        let gameRules=document.querySelector('#gameRules')//遊戲規則按鈕
+        let gameExit=document.querySelector("#gameExit")//退出按鈕
+        let gameStopAlert=document.querySelector("#gameStopAlert")//遊戲結束時分數
+        let returnMenuBtn=document.querySelector("#returnMenuBtn")//返回主菜單按鈕
+        let keepGame=document.querySelector("#keepGame")//繼續遊戲按鈕
+        let gameStop;
+        let gameEnd;
+        let Mask;//儲存遮罩
+        let Mouse;//儲存老鼠
+        let score;//分數
+        let life;//生命值
+        let clock;//倒數
+        let gameTimer ;
+        let clockTimer;
+        let currentMouse//目前老鼠數目
+        let timer
+        let maxMouseCount;//老鼠最大數目
+        //洞口座標
+        let coordinate = [{x: 130, y:173}, {x: 320, y:171}, {x: 515, y:175}, {x: 105, y: 265}, {x: 320, y: 256}, {x: 522, y: 256}, {x: 96, y: 350}, {x: 320, y: 355}, {x: 540, y: 358}];
+        //判斷瀏覽器選擇CSS 解決IE CUSOR兼容問題        
+        var isIE = (/Trident\/7\./).test(navigator.userAgent);        
+        if (isIE) {
+            
+            _ground.style.cursor='url("images/hammer.ico"),auto'
+        }       
+        
+        //隱藏按鈕
+        gameStopAlert.style.display="none"
+        returnMenuBtn.style.display="none"
+        gameStopBtn.style.display='none'
+        keepGame.style.display='none'
+        // 1:滑鼠點擊GROUND 樣式改變
+        
+        _ground.onmousedown = function() {
+            if (isIE) {
+                console.log('ieieiedown')
+                
+                _ground.style.cursor='url("images/hammer.ico"),auto'
+            }else{
+                _ground.style.cursor = "url('images/hammer.png'),auto";
+            }
+            
+        }
+        _ground.onmouseup = function() {
+            if (isIE) {
+                console.log('ieieieup')
+                _ground.style.cursor='url("images/hammer.ico"),auto'
+            }else{
+                _ground.style.cursor = "url('images/hammer.png'),auto";    
+            }
+            
+        }  
+        
+        //2.創建洞穴和遮罩
+        function createMask(){
+            for(let i=0;i<coordinate.length;i++){
+                let mask=document.createElement("div")
+                mask.className="mask";
+                mask.style.left=coordinate[i].x+'px';
+                mask.style.top=coordinate[i].y+'px';
+                mask.index=i;
+                let maskimg=document.createElement("div");
+                maskimg.className="mask"
+                maskimg.style.zIndex=i*2+1//遮罩的層級大於老鼠的層級
+                maskimg.style.backgroundImage="('images/1.jpg')";
+                mask.appendChild(maskimg);//添加遮罩
+                Mask[i]=mask
+                _ground.appendChild(mask)//添加洞穴
+                mask.onclick=function(){
+                    disappear(this.index,true)
+                }
+            }
+        }
+        //3.創建老鼠
+        function createMouse(i){
+            let picnum=Math.floor(Math.random()*4)//0-3隨機產生一個數字隨機用地屬圖片
+            let mouse=document.createElement("div");
+            mouse.className="mouse";
+            mouse.num=picnum;
+            mouse.style.zIndex=i*2;
+            mouse.style.backgroundImage="url('images/rat.png')";
+            Mouse[i]=mouse;//數組添加老鼠
+            Mask[i].appendChild(mouse);//像洞穴添加老鼠
+            //每個老鼠都有一個定時器
+            timer=setTimeout(function(){
+                disappear(i,false)
+            },2000);
+            mouse.timer=timer
+        }
+        //4.老鼠出現
+        function genarateMouse(){
+            currentMouse=Mouse.filter(function(item){return item})
+            let num=Math.floor(Math.random()*coordinate.length);//隨機產生一個ˊ洞穴位置
+            if(currentMouse.length<maxMouseCount && Mouse[num]==null){
+                createMouse(num)
+            }
+        }
+        //5.老鼠消失=>1.老鼠自動消失 2.老鼠被敲打後消失
+        function disappear(index,isHit){//isHit是否被敲打,布林直
+            if(Mouse[index]!=null){
+                Mouse[index].style.top="70px"//老鼠慢慢往下
+                Mouse[index].style.transition="top 0.5s"
+                if(isHit){//如果被敲打
+                    clearInterval(Mouse[index].timer)
+                    
+                    score+=10
+                }else if(gameStop==false){
+                    life-=1
+                }
+                setTimeout(function(){
+                    if(Mouse[index]){
+                        Mask[index].removeChild(Mouse[index])//從陣列中移除老鼠
+                    }
+                    Mouse[index]=null
+                }
+                ,500)
+            }
+            
+        }
+        
+        //6.音樂撥放
+        
+        playMusic.onclick=function(){
+            
+            playOrPause()
+        }
+        function playOrPause(){          
+            if(audio.paused){
+                audio.play();                
+            }else if(audio.played){
+                audio.pause();               
+            }
+        }
+        //7.遊戲開始
+        gameStartBtn.onclick=function(){
+            init()
+        }       
+        
+        //8.遊戲暫停      
+        
+        gameStopBtn.onclick=function(){ 
+            gameStop=true
+            $('.mask').remove()//不這樣暫停後又快速按開始會有BUG
+            
+            
+            clearInterval(gameTimer);
+            clearInterval(clockTimer)
+            
+            keepGame.style.display='block'
+            returnMenuBtn.style.display='block'
+        }
+        //9.回到主選單
+        
+        returnMenuBtn.onclick=function(){
+            gameEnd=true
+            
+            gameStartBtn.style.display='block'
+            gameRules.style.display='block'
+            gameExit.style.display='block'
+            gameStopAlert.style.display="block"           
+            gameStopAlert.innerHTML='遊戲結束!您的得分是:'+score
+            returnMenuBtn.style.display="none"
+            gameStopBtn.style.display='none'
+            keepGame.style.display='none'
+            
+        }
+        //10.繼續遊戲
+        keepGame.onclick=function(){
+            gameStop=false
+            Mask = [];// 儲存MASK
+            Mouse = [];// 儲存老鼠
+            score = score;
+            life = life;
+            clock=clock;         
+            
+            returnMenuBtn.style.display="none"
+            keepGame.style.display="none"
+            clockTimer=setInterval(function(){
+                clock-=1
+            },1000)
+            createMask();
+            gameTimer = setInterval(function(){
+                genarateMouse();
+                if(life <= 0 || clock <= -1 || gameEnd==true)
+                {
+                    clearInterval(gameTimer);
+                    clearInterval(clockTimer)       
+                    gameStopAlert.style.display="block"
+                    returnMenuBtn.style.display="block"           
+                    gameStopAlert.innerHTML='遊戲結束!您的得分是:'+score
+                    
+                }
+                document.getElementsByClassName("score")[0].getElementsByTagName("span")[0].innerHTML = "分數:"+ score + "，生命："+ life+"倒數:"+clock;
+                maxMouseCount = score / 100 + 1;// 每一百分 老鼠最大上限增加一隻
+            },50);
+        }
+        //初始化
+        function init() {
+            gameEnd=false
+            gameStop=false
+            Mask = [];// 儲存MASK
+            Mouse = [];// 儲存老鼠
+            score = 0;
+            life = 10;
+            clock=30;            
+            gameStartBtn.style.display='none'
+            gameRules.style.display='none'
+            gameExit.style.display='none'
+            gameStopBtn.style.display='block'
+            gameStopAlert.style.display="none"     
+            gameTimer = null;
+            maxMouseCount = 2;//一開始老鼠出現不超過2個
+            audio.play()
+            clockTimer=setInterval(function(){
+                clock-=1
+            },1000)
+            createMask();
+            gameTimer = setInterval(function(){
+                genarateMouse();
+                if(life <= 0 || clock <= -1 || gameEnd==true)
+                {
+                    clearInterval(gameTimer);
+                    clearInterval(clockTimer)       
+                    gameStopAlert.style.display="block"
+                    returnMenuBtn.style.display="block"           
+                    gameStopAlert.innerHTML='遊戲結束!您的得分是:'+score
+                    
+                }
+                document.getElementsByClassName("score")[0].getElementsByTagName("span")[0].innerHTML = "分數:"+ score + "，生命："+ life+"倒數:"+clock;
+                maxMouseCount = score / 100 + 1;// 每一百分 老鼠最大上限增加一隻
+            },50);
+            
+        }
+        
+    </script>
+</body>
+</html>
